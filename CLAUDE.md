@@ -22,10 +22,12 @@ Re-read both after any context compaction.
 
 ## Do not write these by hand
 
-`last_touched` and the `## Session log` section are maintained by the SessionEnd
+`last_touched` and the session log in `log.md` are maintained by the SessionEnd
 hook, which only writes when there are new commits. Stamping either yourself
 destroys the one guarantee they carry — that a recent date means recent,
 verifiable work. `AGENTS.md` section 1 explains the division of labour in full.
+
+IDEalize writes `last_touched` on project notes that carry `repo:`, from commit evidence. On vault-only projects (no `repo:`), the session that did the work sets it at session close, and the weekly review may set it.
 
 ## Rules that can't lapse
 

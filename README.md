@@ -101,7 +101,7 @@ When a session in a project repo ends, it:
 1. Finds the vault note whose `repo:` pointer matches that repository.
 2. Reads the note's own `last_touched` date.
 3. Asks git what has been committed since then.
-4. Appends those commits to the note's session log and moves the date forward.
+4. Appends those commits to `log.md` beside the note and moves the note's date forward.
 
 Two properties matter more than the mechanism.
 

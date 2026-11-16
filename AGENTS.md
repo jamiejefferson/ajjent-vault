@@ -15,7 +15,7 @@ The vault has three things writing to it, and they must not do each other's work
 
 | Writer | Owns | Runs |
 |---|---|---|
-| **The hook** (`scripts/session-close.py`) | `last_touched`, the `## Session log` section | Automatically, when a session ends |
+| **The hook** (`scripts/session-close.py`) | `last_touched`, the session log in `log.md` | Automatically, when a session ends |
 | **You**, during work | `## State`, `## Decisions`, `## Traps`, `## Open threads`, `## Next actions` | While doing the work, as part of finishing it |
 | **`/vault-review`** | Corrections, challenges, reclassification | Weekly |
 
@@ -27,7 +27,7 @@ notice your version.
 
 ### What this means in practice
 
-**Do not hand-write in `## Session log`.** The hook owns that section. It dedupes
+**Do not hand-write in `log.md`.** The hook owns the session log. It dedupes
 on short commit hash, so anything you add by hand is invisible to it and will sit
 alongside a duplicate the moment the hook next runs.
 
@@ -135,8 +135,7 @@ This is not a gap to engineer around. It is a fact about the work, and the
 honest response is to make it visible: `/vault-review` raises every `active`
 project with no update in 30 days and asks the user to confirm or reclassify.
 
-For these projects, `last_touched` is yours to maintain, because there is no hook
-to conflict with. Update it when you actually change the note's content.
+IDEalize writes `last_touched` on project notes that carry `repo:`, from commit evidence. On vault-only projects (no `repo:`), the session that did the work sets it at session close, and the weekly review may set it.
 
 ---
 
@@ -156,8 +155,8 @@ for.
 `last_touched`. If that date is in the future, or the commits are older than it,
 it finds nothing. Correct the date and it will backfill on the next run.
 
-**It logged a duplicate.** It dedupes on short commit hash against the whole note
-body. A duplicate means the hash was rewritten, usually by a rebase or amend.
+**It logged a duplicate.** It dedupes on short commit hash against `log.md` and
+the index. A duplicate means the hash was rewritten, usually by a rebase or amend.
 Remove the older entry by hand; that is the one case where editing the session log
 is right.
 

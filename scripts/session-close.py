@@ -17,6 +17,10 @@ Design notes, which are deliberate rather than incidental:
 
   * It dedupes on short commit hash, so re-runs cannot double-log.
 
+  * It logs to log.md beside the index and leaves the index body alone, apart
+    from last_touched. A legacy "## Session log" section in the index is read for
+    hashes already logged and is never moved.
+
   * It never fails a session. Any error exits 0 and stays quiet.
 """
 import json
@@ -32,7 +36,7 @@ VAULT = os.environ.get(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
 )
 PROJECTS = os.path.join(VAULT, "Projects")
-LOG_HEADING = "## Session log"
+LOG_FILE = "log.md"
 REPO_KEYS = ("repo", "repository", "path", "source", "code", "repo_path")
 MAX_COMMITS = 20
 
@@ -120,31 +124,51 @@ def main():
     with open(idx, encoding="utf-8") as fh:
         body = fh.read()
 
+    today = datetime.date.today().isoformat()
+    log_path = os.path.join(os.path.dirname(idx), LOG_FILE)
+    if os.path.isfile(log_path):
+        with open(log_path, encoding="utf-8") as fh:
+            log = fh.read()
+    else:
+        name = fm.get("project") or os.path.basename(os.path.dirname(idx))
+        log = (f"---\nproject: {name}\ntype: log\ncreated: {today}\n---\n"
+               f"# {name} log\n")
+
     entries = []
     for line in raw.splitlines():
         parts = line.split("\t", 2)
-        if len(parts) == 3 and parts[0] not in body:  # dedupe on short hash
-            entries.append(f"- `{parts[0]}` {parts[1]} {parts[2]}")
+        # Dedupe on short hash, against the log and a legacy section in the index.
+        if len(parts) == 3 and parts[0] not in log and parts[0] not in body:
+            entries.append(f"- `{parts[0]}` {parts[2]}")
     if not entries:
         return
 
-    today = datetime.date.today().isoformat()
-    branch = run(["git", "-C", repo_root, "rev-parse", "--abbrev-ref", "HEAD"]) or "?"
-    block = f"### {today} ({branch})\n" + "\n".join(entries)
-
-    if LOG_HEADING in body:
-        body = body.replace(LOG_HEADING, f"{LOG_HEADING}\n\n{block}", 1)
+    heading = f"## {today}"
+    lines = log.rstrip("\n").split("\n")
+    if heading in lines:
+        # Today's heading exists: add the bullets at the end of its section.
+        at = lines.index(heading) + 1
+        while at < len(lines) and not lines[at].startswith("## "):
+            at += 1
+        while lines[at - 1] == "":
+            at -= 1
+        lines[at:at] = entries
     else:
-        body = body.rstrip() + f"\n\n{LOG_HEADING}\n\n{block}\n"
+        lines += ["", heading] + entries
+    log = "\n".join(lines) + "\n"
+
+    tmp = log_path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        fh.write(log)
+    os.replace(tmp, log_path)
 
     if re.search(r"^last_touched:.*$", body, flags=re.M):
         body = re.sub(r"^last_touched:.*$", f"last_touched: {today}",
                       body, count=1, flags=re.M)
-
-    tmp = idx + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as fh:
-        fh.write(body)
-    os.replace(tmp, idx)
+        tmp = idx + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as fh:
+            fh.write(body)
+        os.replace(tmp, idx)
 
     project = os.path.basename(os.path.dirname(idx))
     plural = "s" if len(entries) != 1 else ""
